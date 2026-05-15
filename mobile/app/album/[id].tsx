@@ -63,7 +63,7 @@ export default function AlbumSpread() {
     return null;
   }, [pages, pageIdx, turning]);
 
-  const PAGE_INDICATOR_HEIGHT = 24;
+  const PAGE_INDICATOR_HEIGHT = 36;
   const pageWidth = SCREEN.width;
   // Reserve room for header (~60), footer (~78), page indicator, and safe areas
   const pageHeight = SCREEN.height - 60 - 78 - PAGE_INDICATOR_HEIGHT - 40;
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "rgba(0,0,0,0.08)"
   },
   addPageBtnWrap: {
-    position: "absolute", right: 18, bottom: 110
+    position: "absolute", right: 18, bottom: 124
   },
   addPageBtn: {
     width: 48, height: 48, borderRadius: 24,
