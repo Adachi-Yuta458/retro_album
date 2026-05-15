@@ -18,6 +18,7 @@ import Animated, {
   withSequence,
   withTiming
 } from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { api, AlbumDTO, PageDTO, PhotoDTO } from "../../src/lib/api";
 import { colors, themeToPaper, themeToCorner } from "../../src/ui/palette";
 import { SpreadHeader, SpreadFooter } from "../../src/ui/SpreadChrome";
@@ -77,6 +78,32 @@ export default function AlbumSpread() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
     setTurning(dir);
   };
+
+  const SWIPE_DISTANCE_FACTOR = 0.25;
+  const SWIPE_VELOCITY = 500;
+
+  const panGesture = Gesture.Pan()
+    .runOnJS(true)
+    .activeOffsetX([-15, 15])
+    .onEnd((e) => {
+      const dxThreshold = pageWidth * SWIPE_DISTANCE_FACTOR;
+      if (e.translationX < -dxThreshold || e.velocityX < -SWIPE_VELOCITY) {
+        turn("next");
+      } else if (e.translationX > dxThreshold || e.velocityX > SWIPE_VELOCITY) {
+        turn("prev");
+      }
+    });
+
+  const tapGesture = Gesture.Tap()
+    .runOnJS(true)
+    .maxDistance(10)
+    .onEnd((e, success) => {
+      if (!success) return;
+      if (e.x < pageWidth / 2) turn("prev");
+      else turn("next");
+    });
+
+  const composedGesture = Gesture.Exclusive(panGesture, tapGesture);
 
   const onTurnFinished = () => {
     setPageIdx((idx) => (turning === "next" ? idx + 1 : turning === "prev" ? idx - 1 : idx));
@@ -186,43 +213,45 @@ export default function AlbumSpread() {
         onBack={goBackToShelf}
       />
 
-      <View style={[styles.stage, { width: pageWidth, height: pageHeight }]}>
-        {turning === "idle" || !targetPage ? (
-          currentPage ? (
-            <SpreadPage album={album} page={currentPage} width={pageWidth} height={pageHeight} />
-          ) : null
-        ) : (
-          <PageTurner
-            width={pageWidth}
-            height={pageHeight}
-            direction={turning}
-            topPage={
-              turning === "next" ? (
-                currentPage ? <SpreadPage album={album} page={currentPage} width={pageWidth} height={pageHeight} /> : null
-              ) : (
-                targetPage ? <SpreadPage album={album} page={targetPage} width={pageWidth} height={pageHeight} /> : null
-              )
-            }
-            bottomPage={
-              turning === "next" ? (
-                targetPage ? <SpreadPage album={album} page={targetPage} width={pageWidth} height={pageHeight} /> : null
-              ) : (
-                currentPage ? <SpreadPage album={album} page={currentPage} width={pageWidth} height={pageHeight} /> : null
-              )
-            }
-            onFinished={onTurnFinished}
-          />
-        )}
+      <GestureDetector gesture={composedGesture}>
+        <View style={[styles.stage, { width: pageWidth, height: pageHeight }]}>
+          {turning === "idle" || !targetPage ? (
+            currentPage ? (
+              <SpreadPage album={album} page={currentPage} width={pageWidth} height={pageHeight} />
+            ) : null
+          ) : (
+            <PageTurner
+              width={pageWidth}
+              height={pageHeight}
+              direction={turning}
+              topPage={
+                turning === "next" ? (
+                  currentPage ? <SpreadPage album={album} page={currentPage} width={pageWidth} height={pageHeight} /> : null
+                ) : (
+                  targetPage ? <SpreadPage album={album} page={targetPage} width={pageWidth} height={pageHeight} /> : null
+                )
+              }
+              bottomPage={
+                turning === "next" ? (
+                  targetPage ? <SpreadPage album={album} page={targetPage} width={pageWidth} height={pageHeight} /> : null
+                ) : (
+                  currentPage ? <SpreadPage album={album} page={currentPage} width={pageWidth} height={pageHeight} /> : null
+                )
+              }
+              onFinished={onTurnFinished}
+            />
+          )}
 
-        {/* "photo dropping into corners" overlay flash on insert */}
-        {insertingPhotoId && currentPage ? (
-          <Animated.View pointerEvents="none" style={[styles.insertOverlay, overlayStyle]}>
-            <View style={styles.insertChip}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#f4c834" }} />
-            </View>
-          </Animated.View>
-        ) : null}
-      </View>
+          {/* "photo dropping into corners" overlay flash on insert */}
+          {insertingPhotoId && currentPage ? (
+            <Animated.View pointerEvents="none" style={[styles.insertOverlay, overlayStyle]}>
+              <View style={styles.insertChip}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#f4c834" }} />
+              </View>
+            </Animated.View>
+          ) : null}
+        </View>
+      </GestureDetector>
 
       <PageIndicator
         current={currentPage ? currentPage.position : 0}
@@ -235,12 +264,6 @@ export default function AlbumSpread() {
         onWrite={() => Alert.alert("かきこみ", "次のアップデートで対応します。")}
         onSticker={() => Alert.alert("シール", "次のアップデートで対応します。")}
       />
-
-      {/* prev/next quick tap zones */}
-      <View pointerEvents="box-none" style={styles.tapLayer}>
-        <View style={{ flex: 1 }} onTouchEnd={() => turn("prev")} />
-        <View style={{ flex: 1 }} onTouchEnd={() => turn("next")} />
-      </View>
 
       {/* floating add-page button at end of book */}
       {pageIdx === pages.length - 1 ? (
@@ -257,11 +280,6 @@ export default function AlbumSpread() {
 
 const styles = StyleSheet.create({
   stage: { alignSelf: "center", backgroundColor: "#0e0a06" },
-  tapLayer: {
-    position: "absolute",
-    top: 60, bottom: 102, left: 0, right: 0,
-    flexDirection: "row"
-  },
   insertOverlay: {
     position: "absolute",
     top: "30%",
