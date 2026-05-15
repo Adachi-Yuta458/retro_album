@@ -29,6 +29,12 @@ const SCREEN = Dimensions.get("window");
 export default function AlbumSpread() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+
+  const goBackToShelf = useCallback(() => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)");
+  }, [router]);
+
   const albumId = Number(id);
 
   const [album, setAlbum] = useState<AlbumDTO | null>(null);
@@ -176,7 +182,7 @@ export default function AlbumSpread() {
       <SpreadHeader
         title={`${album.title}${album.year ? " · " + album.year : ""}`}
         page={`${currentPage ? currentPage.position : 0} / ${pages.length}`}
-        onBack={() => router.back()}
+        onBack={goBackToShelf}
       />
 
       <View style={[styles.stage, { width: pageWidth, height: pageHeight }]}>
