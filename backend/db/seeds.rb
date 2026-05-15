@@ -49,7 +49,7 @@ def seed_theme_a(page, n)
       corner_kind: "kraft")
     page.photos.create!(caption: "むしとり名人",
       scene: "park", x: 0.20, y: 0.55, w: 0.50, h: 0.28, rotation: 0.8,
-      corner_kind: "kraft", sticker_kind: "leaf", sticker_color: "#7ac8a4")
+      corner_kind: "kraft", sticker_kind: "flower", sticker_color: "#7ac8a4")
   when 3
     page.photos.create!(caption: "ひまわり畑",
       scene: "park", x: 0.12, y: 0.14, w: 0.74, h: 0.32, rotation: 0,
@@ -85,7 +85,7 @@ def seed_theme_b(page, n)
       corner_kind: "gold", washi_tape_color: "#f4c834")
     page.photos.create!(caption: "凧あげ、風がよわくて",
       scene: "newyear", x: 0.18, y: 0.55, w: 0.62, h: 0.28, rotation: -1.5,
-      corner_kind: "white", sticker_kind: "kite", sticker_color: "#f0648a")
+      corner_kind: "white", sticker_kind: "heart", sticker_color: "#f0648a")
   when 3
     page.photos.create!(caption: "ひな祭り、おさげ髪",
       scene: "kimono", x: 0.12, y: 0.10, w: 0.50, h: 0.40, rotation: 1.2,
