@@ -1,0 +1,36 @@
+# 開発用 Dockerfile（バックエンド）
+# 本番用は Rails 8 が生成した Dockerfile を使う
+FROM ruby:3.3.0-slim
+
+ENV LANG=C.UTF-8 \
+    BUNDLE_PATH=/usr/local/bundle \
+    BUNDLE_JOBS=4 \
+    BUNDLE_RETRY=3 \
+    RAILS_LOG_TO_STDOUT=1
+
+# 開発に必要なシステムパッケージ
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+      build-essential \
+      git \
+      curl \
+      libsqlite3-dev \
+      libvips42 \
+      libffi-dev \
+      libyaml-dev \
+      pkg-config \
+      tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# gem 依存を先にコピーしてキャッシュを効かせる
+COPY Gemfile Gemfile.lock ./
+RUN gem install bundler -v 2.6.9 \
+    && bundle install
+
+# 残りのソースはボリュームマウントで上書きするが、初回 build 時にも一通り入れておく
+COPY . .
+
+EXPOSE 3000
+
+CMD ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]

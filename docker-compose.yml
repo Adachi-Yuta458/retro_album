@@ -1,0 +1,33 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: album_backend
+    environment:
+      RAILS_ENV: development
+      # iOS シミュレータ / 実機が画像 URL を取得できるよう、ホストから見える URL を渡す
+      # 実機なら LAN の IP を指定して docker compose を立ち上げ直す
+      ALBUM_PUBLIC_HOST: ${ALBUM_PUBLIC_HOST:-http://localhost:3000}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - bundle_cache:/usr/local/bundle
+      - db_data:/app/storage
+      - storage_data:/app/storage/active_storage
+    command: >
+      bash -lc "
+        bundle check || bundle install &&
+        rm -f tmp/pids/server.pid &&
+        bin/rails db:prepare &&
+        bin/rails db:seed &&
+        bin/rails server -b 0.0.0.0 -p 3000
+      "
+    tty: true
+    stdin_open: true
+
+volumes:
+  bundle_cache:
+  db_data:
+  storage_data:

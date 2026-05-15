@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "思い出棚",
+    "slug": "omoide-tana",
+    "scheme": "omoidetana",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#fbf2dc"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.example.omoidetana",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "アルバムに写真を追加するために使います。",
+        "NSCameraUsageDescription": "アルバムに写真を撮って追加するために使います。",
+        "NSAppTransportSecurity": { "NSAllowsLocalNetworking": true }
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#fbf2dc"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.example.omoidetana"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      "expo-image-picker"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

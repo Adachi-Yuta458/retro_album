@@ -1,0 +1,40 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Ruby LSP cache
+.ruby-lsp/
+
+# Node
+node_modules/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Expo
+.expo/
+dist/
+web-build/
+.metro-health-check*
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs / temp
+*.log
+log/
+tmp/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+Album-App.html
