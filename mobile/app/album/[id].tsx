@@ -223,7 +223,7 @@ export default function AlbumSpread() {
       </View>
 
       <SpreadFooter
-        onTurn={() => turn("next")}
+        onBackToShelf={goBackToShelf}
         onPhoto={onAddPhoto}
         onWrite={() => Alert.alert("かきこみ", "次のアップデートで対応します。")}
         onSticker={() => Alert.alert("シール", "次のアップデートで対応します。")}

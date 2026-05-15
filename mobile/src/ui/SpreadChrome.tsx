@@ -32,19 +32,22 @@ export function SpreadHeader({ title, onBack, onMenu }: HeaderProps) {
 }
 
 type FooterProps = {
-  onTurn?: () => void;
+  onBackToShelf?: () => void;
   onPhoto?: () => void;
   onWrite?: () => void;
   onSticker?: () => void;
 };
 
-export function SpreadFooter({ onTurn, onPhoto, onWrite, onSticker }: FooterProps) {
+export function SpreadFooter({ onBackToShelf, onPhoto, onWrite, onSticker }: FooterProps) {
   return (
     <View style={styles.footer}>
-      <FooterBtn label="めくる" onPress={onTurn} icon={
+      <FooterBtn label="ほんだな" onPress={onBackToShelf} icon={
         <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-          <Path d="M4 5 L12 5 L20 8 L20 21 L12 18 L4 18 Z" stroke="#1a1a1a" strokeWidth={1.5} strokeLinejoin="round" />
-          <Path d="M12 5 L12 18" stroke="#1a1a1a" strokeWidth={1.5} />
+          <Line x1="3" y1="20" x2="21" y2="20" stroke="#1a1a1a" strokeWidth={1.5} strokeLinecap="round" />
+          <Rect x="5"  y="8"  width="3" height="12" stroke="#1a1a1a" strokeWidth={1.5} />
+          <Rect x="9"  y="6"  width="3" height="14" stroke="#1a1a1a" strokeWidth={1.5} />
+          <Rect x="13" y="10" width="3" height="10" stroke="#1a1a1a" strokeWidth={1.5} />
+          <Rect x="17" y="7"  width="3" height="13" stroke="#1a1a1a" strokeWidth={1.5} />
         </Svg>
       } />
       <FooterBtn label="しゃしん" onPress={onPhoto} icon={
