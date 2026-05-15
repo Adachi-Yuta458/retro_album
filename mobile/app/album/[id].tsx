@@ -85,6 +85,7 @@ export default function AlbumSpread() {
   const panGesture = Gesture.Pan()
     .runOnJS(true)
     .activeOffsetX([-15, 15])
+    .failOffsetY([-10, 10])
     .onEnd((e) => {
       const dxThreshold = pageWidth * SWIPE_DISTANCE_FACTOR;
       if (e.translationX < -dxThreshold || e.velocityX < -SWIPE_VELOCITY) {
