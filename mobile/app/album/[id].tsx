@@ -23,6 +23,7 @@ import { colors, themeToPaper, themeToCorner } from "../../src/ui/palette";
 import { SpreadHeader, SpreadFooter } from "../../src/ui/SpreadChrome";
 import { SpreadPage } from "../../src/ui/SpreadPage";
 import { PageTurner } from "../../src/ui/PageTurner";
+import { PageIndicator } from "../../src/ui/PageIndicator";
 
 const SCREEN = Dimensions.get("window");
 
@@ -61,9 +62,10 @@ export default function AlbumSpread() {
     return null;
   }, [pages, pageIdx, turning]);
 
+  const PAGE_INDICATOR_HEIGHT = 24;
   const pageWidth = SCREEN.width;
-  // Reserve room for header (~60) and footer (~78) and safe areas
-  const pageHeight = SCREEN.height - 60 - 78 - 40;
+  // Reserve room for header (~60), footer (~78), page indicator, and safe areas
+  const pageHeight = SCREEN.height - 60 - 78 - PAGE_INDICATOR_HEIGHT - 40;
 
   const turn = (dir: "next" | "prev") => {
     if (turning !== "idle") return;
@@ -222,6 +224,11 @@ export default function AlbumSpread() {
         ) : null}
       </View>
 
+      <PageIndicator
+        current={currentPage ? currentPage.position : 0}
+        total={pages.length}
+      />
+
       <SpreadFooter
         onBackToShelf={goBackToShelf}
         onPhoto={onAddPhoto}
@@ -252,7 +259,7 @@ const styles = StyleSheet.create({
   stage: { alignSelf: "center", backgroundColor: "#0e0a06" },
   tapLayer: {
     position: "absolute",
-    top: 60, bottom: 78, left: 0, right: 0,
+    top: 60, bottom: 102, left: 0, right: 0,
     flexDirection: "row"
   },
   insertOverlay: {
