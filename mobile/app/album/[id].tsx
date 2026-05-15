@@ -181,7 +181,6 @@ export default function AlbumSpread() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0e0a06" }} edges={["top", "bottom"]}>
       <SpreadHeader
         title={`${album.title}${album.year ? " · " + album.year : ""}`}
-        page={`${currentPage ? currentPage.position : 0} / ${pages.length}`}
         onBack={goBackToShelf}
       />
 

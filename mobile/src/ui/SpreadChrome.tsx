@@ -5,12 +5,11 @@ import { colors } from "./palette";
 
 type HeaderProps = {
   title: string;
-  page: string;
   onBack?: () => void;
   onMenu?: () => void;
 };
 
-export function SpreadHeader({ title, page, onBack, onMenu }: HeaderProps) {
+export function SpreadHeader({ title, onBack, onMenu }: HeaderProps) {
   return (
     <View style={styles.header}>
       <Pressable onPress={onBack} style={styles.iconBtn} hitSlop={8}>
@@ -20,7 +19,6 @@ export function SpreadHeader({ title, page, onBack, onMenu }: HeaderProps) {
       </Pressable>
       <View style={{ flex: 1, alignItems: "center" }}>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.page}>{page}</Text>
       </View>
       <Pressable onPress={onMenu} style={styles.iconBtn} hitSlop={8}>
         <Svg width={18} height={18} viewBox="0 0 24 24">
@@ -101,7 +99,6 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   title: { fontSize: 14, fontWeight: "600", color: colors.ink, letterSpacing: 0.5 },
-  page: { fontSize: 10, color: colors.inkSubtle, marginTop: 2 },
   footer: {
     flexDirection: "row",
     paddingVertical: 12,
