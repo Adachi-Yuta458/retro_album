@@ -82,5 +82,7 @@ export const api = {
       if (v !== undefined && v !== null) form.append(k, String(v));
     });
     return request(`/pages/${pageId}/photos`, { method: "POST", body: form }) as Promise<{ photo: PhotoDTO }>;
-  }
+  },
+  updatePhoto: (id: number, patch: Partial<PhotoDTO>): Promise<{ photo: PhotoDTO }> =>
+    request(`/photos/${id}`, { method: "PATCH", body: JSON.stringify(patch) })
 };
