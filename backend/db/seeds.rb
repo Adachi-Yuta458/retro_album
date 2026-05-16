@@ -145,7 +145,7 @@ ALBUMS.each do |attrs|
   paper_kind = PAPER_BY_THEME[album.theme] || "cream"
   (1..4).each do |n|
     page = album.pages.find_or_initialize_by(position: n)
-    page.paper_kind = paper_kind
+    page.paper_kind = paper_kind if page.new_record?
     page.save!
     next if page.photos.any?
     seed_photos_for(page, album.theme, n)
