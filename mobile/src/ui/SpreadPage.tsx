@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import type { GestureType } from "react-native-gesture-handler";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { PaperBg } from "./PaperBg";
 import { BindingHoles } from "./BindingHoles";
 import { HeldPhoto } from "./HeldPhoto";
@@ -10,6 +11,78 @@ import { Sticker, StickerKind } from "./Sticker";
 import { DateStamp } from "./DateStamp";
 import { CornerKind, PaperKind, themeToCorner, themeToPaper } from "./palette";
 import type { PageDTO, AlbumDTO, PhotoDTO } from "../lib/api";
+
+type PhotoItemProps = {
+  photo: PhotoDTO;
+  album: AlbumDTO;
+  left: number;
+  top: number;
+  w: number;
+  h: number;
+  cornerKind: CornerKind;
+  onPhotoTap?: (photo: PhotoDTO) => void;
+  parentTapRef?: React.MutableRefObject<GestureType | undefined>;
+};
+
+function PhotoItem({ photo, album, left, top, w, h, cornerKind, onPhotoTap, parentTapRef }: PhotoItemProps) {
+  const pressOpacity = useSharedValue(1);
+
+  let photoTap = Gesture.Tap()
+    .runOnJS(true)
+    .maxDistance(10)
+    .onBegin(() => {
+      pressOpacity.value = withTiming(0.85, { duration: 80 });
+    })
+    .onFinalize(() => {
+      pressOpacity.value = withTiming(1, { duration: 140 });
+    })
+    .onEnd((_, success) => {
+      if (success) onPhotoTap?.(photo);
+    });
+  if (parentTapRef) {
+    photoTap = photoTap.blocksExternalGesture(parentTapRef);
+  }
+
+  const pressedStyle = useAnimatedStyle(() => ({ opacity: pressOpacity.value }));
+
+  const stickerKind = (photo.sticker_kind as StickerKind | null) || null;
+
+  return (
+    <GestureDetector gesture={photoTap}>
+      <Animated.View style={[{ position: "absolute", left, top, width: w, height: h }, pressedStyle]}>
+        {photo.washi_tape_color ? (
+          <WashiTape
+            color={photo.washi_tape_color}
+            width={Math.min(60, w * 0.5)}
+            height={14}
+            rotation={-8}
+            style={{ position: "absolute", top: -7, left: -10, zIndex: 3 }}
+          />
+        ) : null}
+        <HeldPhoto
+          uri={photo.image_url}
+          scene={photo.scene}
+          width={w}
+          height={h}
+          rotation={photo.rotation || 0}
+          cornerKind={(photo.corner_kind as CornerKind) || cornerKind}
+          cornerSize={Math.max(12, Math.min(20, w * 0.1))}
+          fade={album.theme === "C" ? 0.65 : 0.5}
+        />
+        {photo.caption ? (
+          <Text style={[spreadStyles.caption, captionStyleForTheme(album.theme)]}>
+            {photo.caption}
+          </Text>
+        ) : null}
+        {stickerKind ? (
+          <View style={{ position: "absolute", right: -14, top: -14, zIndex: 4 }}>
+            <Sticker kind={stickerKind} size={32} color={photo.sticker_color || "#f4c834"} />
+          </View>
+        ) : null}
+      </Animated.View>
+    </GestureDetector>
+  );
+}
 
 type Props = {
   album: AlbumDTO;
@@ -52,52 +125,19 @@ export function SpreadPage({ album, page, width, height, onPhotoTap, parentTapRe
         const h = photo.h * innerH;
         const left = insetLeft + photo.x * innerW;
         const top = 24 + photo.y * innerH;
-        const stickerKind = (photo.sticker_kind as StickerKind | null) || null;
-
-        let photoTap = Gesture.Tap()
-          .runOnJS(true)
-          .maxDistance(10)
-          .onEnd((_, success) => {
-            if (success) onPhotoTap?.(photo);
-          });
-        if (parentTapRef) {
-          photoTap = photoTap.blocksExternalGesture(parentTapRef);
-        }
-
         return (
-          <GestureDetector key={photo.id} gesture={photoTap}>
-            <View style={{ position: "absolute", left, top, width: w, height: h }}>
-              {photo.washi_tape_color ? (
-                <WashiTape
-                  color={photo.washi_tape_color}
-                  width={Math.min(60, w * 0.5)}
-                  height={14}
-                  rotation={-8}
-                  style={{ position: "absolute", top: -7, left: -10, zIndex: 3 }}
-                />
-              ) : null}
-              <HeldPhoto
-                uri={photo.image_url}
-                scene={photo.scene}
-                width={w}
-                height={h}
-                rotation={photo.rotation || 0}
-                cornerKind={(photo.corner_kind as CornerKind) || cornerKind}
-                cornerSize={Math.max(12, Math.min(20, w * 0.1))}
-                fade={album.theme === "C" ? 0.65 : 0.5}
-              />
-              {photo.caption ? (
-                <Text style={[spreadStyles.caption, captionStyleForTheme(album.theme)]}>
-                  {photo.caption}
-                </Text>
-              ) : null}
-              {stickerKind ? (
-                <View style={{ position: "absolute", right: -14, top: -14, zIndex: 4 }}>
-                  <Sticker kind={stickerKind} size={32} color={photo.sticker_color || "#f4c834"} />
-                </View>
-              ) : null}
-            </View>
-          </GestureDetector>
+          <PhotoItem
+            key={photo.id}
+            photo={photo}
+            album={album}
+            left={left}
+            top={top}
+            w={w}
+            h={h}
+            cornerKind={cornerKind}
+            onPhotoTap={onPhotoTap}
+            parentTapRef={parentTapRef}
+          />
         );
       })}
 
