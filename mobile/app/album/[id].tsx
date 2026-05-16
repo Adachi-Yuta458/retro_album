@@ -3,8 +3,8 @@ import {
   View,
   StyleSheet,
   ActivityIndicator,
-  Dimensions,
-  Alert
+  Alert,
+  LayoutChangeEvent
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,8 +25,6 @@ import { SpreadHeader, SpreadFooter } from "../../src/ui/SpreadChrome";
 import { SpreadPage } from "../../src/ui/SpreadPage";
 import { PageTurner } from "../../src/ui/PageTurner";
 import { PageIndicator } from "../../src/ui/PageIndicator";
-
-const SCREEN = Dimensions.get("window");
 
 export default function AlbumSpread() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -64,11 +62,13 @@ export default function AlbumSpread() {
   }, [pages, pageIdx, turning]);
 
   const [indicatorH, setIndicatorH] = useState(36);
-  const pageWidth = SCREEN.width;
-  // Reserve room for header (~60), footer (~78), page indicator, and safe areas.
-  // indicatorH is populated by PageIndicator's onLayout (initial value 36 matches
-  // the old PAGE_INDICATOR_HEIGHT constant to keep first-frame jump minimal).
-  const pageHeight = SCREEN.height - 60 - 78 - indicatorH - 40;
+  const [stageSize, setStageSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  const onStageLayout = useCallback((e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setStageSize((prev) =>
+      prev.w === width && prev.h === height ? prev : { w: width, h: height }
+    );
+  }, []);
 
   const turn = (dir: "next" | "prev") => {
     if (turning !== "idle") return;
@@ -89,7 +89,7 @@ export default function AlbumSpread() {
     .activeOffsetX([-15, 15])
     .failOffsetY([-10, 10])
     .onEnd((e) => {
-      const dxThreshold = pageWidth * SWIPE_DISTANCE_FACTOR;
+      const dxThreshold = stageSize.w * SWIPE_DISTANCE_FACTOR;
       if (e.translationX < -dxThreshold || e.velocityX < -SWIPE_VELOCITY) {
         turn("next");
       } else if (e.translationX > dxThreshold || e.velocityX > SWIPE_VELOCITY) {
@@ -102,7 +102,7 @@ export default function AlbumSpread() {
     .maxDistance(10)
     .onEnd((e, success) => {
       if (!success) return;
-      if (e.x < pageWidth / 2) turn("prev");
+      if (e.x < stageSize.w / 2) turn("prev");
       else turn("next");
     });
 
@@ -216,45 +216,49 @@ export default function AlbumSpread() {
         onBack={goBackToShelf}
       />
 
-      <GestureDetector gesture={composedGesture}>
-        <View style={[styles.stage, { width: pageWidth, height: pageHeight }]}>
-          {turning === "idle" || !targetPage ? (
-            currentPage ? (
-              <SpreadPage album={album} page={currentPage} width={pageWidth} height={pageHeight} />
-            ) : null
-          ) : (
-            <PageTurner
-              width={pageWidth}
-              height={pageHeight}
-              direction={turning}
-              topPage={
-                turning === "next" ? (
-                  currentPage ? <SpreadPage album={album} page={currentPage} width={pageWidth} height={pageHeight} /> : null
-                ) : (
-                  targetPage ? <SpreadPage album={album} page={targetPage} width={pageWidth} height={pageHeight} /> : null
-                )
-              }
-              bottomPage={
-                turning === "next" ? (
-                  targetPage ? <SpreadPage album={album} page={targetPage} width={pageWidth} height={pageHeight} /> : null
-                ) : (
-                  currentPage ? <SpreadPage album={album} page={currentPage} width={pageWidth} height={pageHeight} /> : null
-                )
-              }
-              onFinished={onTurnFinished}
-            />
-          )}
+      <View style={{ flex: 1 }} onLayout={onStageLayout}>
+        <GestureDetector gesture={composedGesture}>
+          <View style={[styles.stage, { width: stageSize.w, height: stageSize.h }]}>
+            {stageSize.h > 0 ? (
+              turning === "idle" || !targetPage ? (
+                currentPage ? (
+                  <SpreadPage album={album} page={currentPage} width={stageSize.w} height={stageSize.h} />
+                ) : null
+              ) : (
+                <PageTurner
+                  width={stageSize.w}
+                  height={stageSize.h}
+                  direction={turning}
+                  topPage={
+                    turning === "next" ? (
+                      currentPage ? <SpreadPage album={album} page={currentPage} width={stageSize.w} height={stageSize.h} /> : null
+                    ) : (
+                      targetPage ? <SpreadPage album={album} page={targetPage} width={stageSize.w} height={stageSize.h} /> : null
+                    )
+                  }
+                  bottomPage={
+                    turning === "next" ? (
+                      targetPage ? <SpreadPage album={album} page={targetPage} width={stageSize.w} height={stageSize.h} /> : null
+                    ) : (
+                      currentPage ? <SpreadPage album={album} page={currentPage} width={stageSize.w} height={stageSize.h} /> : null
+                    )
+                  }
+                  onFinished={onTurnFinished}
+                />
+              )
+            ) : null}
 
-          {/* "photo dropping into corners" overlay flash on insert */}
-          {insertingPhotoId && currentPage ? (
-            <Animated.View pointerEvents="none" style={[styles.insertOverlay, overlayStyle]}>
-              <View style={styles.insertChip}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#f4c834" }} />
-              </View>
-            </Animated.View>
-          ) : null}
-        </View>
-      </GestureDetector>
+            {/* "photo dropping into corners" overlay flash on insert */}
+            {insertingPhotoId && currentPage ? (
+              <Animated.View pointerEvents="none" style={[styles.insertOverlay, overlayStyle]}>
+                <View style={styles.insertChip}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#f4c834" }} />
+                </View>
+              </Animated.View>
+            ) : null}
+          </View>
+        </GestureDetector>
+      </View>
 
       <PageIndicator
         onLayout={(e) => setIndicatorH(e.nativeEvent.layout.height)}
