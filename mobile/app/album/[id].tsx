@@ -21,7 +21,7 @@ import Animated, {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import type { GestureType } from "react-native-gesture-handler";
 import { api, AlbumDTO, PageDTO, PhotoDTO } from "../../src/lib/api";
-import { colors, themeToPaper, themeToCorner } from "../../src/ui/palette";
+import { colors, themeToPaper, themeToCorner, PaperKind } from "../../src/ui/palette";
 import { SpreadHeader, SpreadFooter } from "../../src/ui/SpreadChrome";
 import { SpreadPage } from "../../src/ui/SpreadPage";
 import { PageTurner } from "../../src/ui/PageTurner";
@@ -62,6 +62,13 @@ export default function AlbumSpread() {
     if (turning === "prev") return pages[pageIdx - 1];
     return null;
   }, [pages, pageIdx, turning]);
+
+  const flippingPage =
+    turning === "next" ? currentPage :
+    turning === "prev" ? targetPage :
+    null;
+  const flippingPaperKind: PaperKind =
+    (flippingPage?.paper_kind as PaperKind) || themeToPaper(album?.theme || "A");
 
   const [indicatorH, setIndicatorH] = useState(36);
   const [stageSize, setStageSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
@@ -279,6 +286,7 @@ export default function AlbumSpread() {
                   width={stageSize.w}
                   height={stageSize.h}
                   direction={turning}
+                  frontPaperKind={flippingPaperKind}
                   topPage={
                     turning === "next"
                       ? (currentPage ? renderSpread(currentPage) : null)
