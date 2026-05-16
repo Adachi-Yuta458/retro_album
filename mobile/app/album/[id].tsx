@@ -63,10 +63,12 @@ export default function AlbumSpread() {
     return null;
   }, [pages, pageIdx, turning]);
 
-  const PAGE_INDICATOR_HEIGHT = 36;
+  const [indicatorH, setIndicatorH] = useState(36);
   const pageWidth = SCREEN.width;
-  // Reserve room for header (~60), footer (~78), page indicator, and safe areas
-  const pageHeight = SCREEN.height - 60 - 78 - PAGE_INDICATOR_HEIGHT - 40;
+  // Reserve room for header (~60), footer (~78), page indicator, and safe areas.
+  // indicatorH is populated by PageIndicator's onLayout (initial value 36 matches
+  // the old PAGE_INDICATOR_HEIGHT constant to keep first-frame jump minimal).
+  const pageHeight = SCREEN.height - 60 - 78 - indicatorH - 40;
 
   const turn = (dir: "next" | "prev") => {
     if (turning !== "idle") return;
@@ -255,6 +257,7 @@ export default function AlbumSpread() {
       </GestureDetector>
 
       <PageIndicator
+        onLayout={(e) => setIndicatorH(e.nativeEvent.layout.height)}
         current={currentPage ? currentPage.position : 0}
         total={pages.length}
       />
@@ -268,7 +271,7 @@ export default function AlbumSpread() {
 
       {/* floating add-page button at end of book */}
       {pageIdx === pages.length - 1 ? (
-        <Animated.View style={styles.addPageBtnWrap} pointerEvents="box-none">
+        <Animated.View style={[styles.addPageBtnWrap, { bottom: 78 + indicatorH + 10 }]} pointerEvents="box-none">
           <View onTouchEnd={onAddPage} style={styles.addPageBtn}>
             <View style={styles.addPageInner} />
             <View style={[styles.addPageInner, styles.addPageVertical]} />
@@ -294,7 +297,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "rgba(0,0,0,0.08)"
   },
   addPageBtnWrap: {
-    position: "absolute", right: 18, bottom: 124
+    // bottom is intentionally omitted here; it is supplied inline as
+    // (78 + indicatorH + 10) so it tracks the measured PageIndicator height.
+    position: "absolute", right: 18
   },
   addPageBtn: {
     width: 48, height: 48, borderRadius: 24,

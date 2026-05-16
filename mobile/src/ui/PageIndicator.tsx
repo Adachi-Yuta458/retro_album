@@ -1,16 +1,17 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, ViewProps } from "react-native";
 import { colors, fonts } from "./palette";
 
 type Props = {
   current: number;
   total: number;
+  onLayout?: ViewProps["onLayout"];
 };
 
-export function PageIndicator({ current, total }: Props) {
+export function PageIndicator({ current, total, onLayout }: Props) {
   const showDots = total > 0 && total <= 8;
   return (
-    <View style={styles.wrap}>
+    <View style={styles.wrap} onLayout={onLayout}>
       {showDots ? (
         <View style={styles.dots}>
           {Array.from({ length: total }).map((_, i) => (
