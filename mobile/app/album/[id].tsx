@@ -216,11 +216,12 @@ export default function AlbumSpread() {
         onBack={goBackToShelf}
       />
 
+      {/* Stage fills the residual area between header and indicator. SpreadPage is tuned for portrait aspect (app.json locks orientation). */}
       <View style={{ flex: 1 }} onLayout={onStageLayout}>
         <GestureDetector gesture={composedGesture}>
-          <View style={[styles.stage, { width: stageSize.w, height: stageSize.h }]}>
-            {stageSize.h > 0 ? (
-              turning === "idle" || !targetPage ? (
+          {stageSize.h > 0 ? (
+            <View style={[styles.stage, { width: stageSize.w, height: stageSize.h }]}>
+              {turning === "idle" || !targetPage ? (
                 currentPage ? (
                   <SpreadPage album={album} page={currentPage} width={stageSize.w} height={stageSize.h} />
                 ) : null
@@ -245,18 +246,22 @@ export default function AlbumSpread() {
                   }
                   onFinished={onTurnFinished}
                 />
-              )
-            ) : null}
+              )}
 
-            {/* "photo dropping into corners" overlay flash on insert */}
-            {insertingPhotoId && currentPage ? (
-              <Animated.View pointerEvents="none" style={[styles.insertOverlay, overlayStyle]}>
-                <View style={styles.insertChip}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#f4c834" }} />
-                </View>
-              </Animated.View>
-            ) : null}
-          </View>
+              {/* "photo dropping into corners" overlay flash on insert */}
+              {insertingPhotoId && currentPage ? (
+                <Animated.View pointerEvents="none" style={[styles.insertOverlay, overlayStyle]}>
+                  <View style={styles.insertChip}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#f4c834" }} />
+                  </View>
+                </Animated.View>
+              ) : null}
+            </View>
+          ) : (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+              <ActivityIndicator color={colors.ink} />
+            </View>
+          )}
         </GestureDetector>
       </View>
 
