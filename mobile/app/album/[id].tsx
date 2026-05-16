@@ -195,6 +195,7 @@ export default function AlbumSpread() {
   };
 
   const onPhotoTap = useCallback((photo: PhotoDTO) => {
+    if (turning !== "idle") return;
     // Alert.prompt is iOS-only; spec accepts this trade-off (iOS-only app per README). Android requires a modal sheet — see spec §3-2.
     Alert.prompt(
       "かきこみ",
@@ -229,7 +230,7 @@ export default function AlbumSpread() {
       "plain-text",
       photo.caption || ""
     );
-  }, []);
+  }, [turning]);
 
   const onAddPage = async () => {
     if (!album) return;

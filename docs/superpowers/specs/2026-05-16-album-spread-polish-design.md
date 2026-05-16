@@ -143,13 +143,8 @@ const onPhotoTap = useCallback(async (photo: PhotoDTO) => {
 `mobile/src/lib/api.ts` に既存の `updatePhoto` がなければ追加。
 
 ```ts
-async updatePhoto(id: number, patch: Partial<PhotoDTO>): Promise<{ photo: PhotoDTO }> {
-  return this.json<{ photo: PhotoDTO }>(`/photos/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ photo: patch })
-  });
-}
+updatePhoto: (id: number, patch: Partial<PhotoDTO>): Promise<{ photo: PhotoDTO }> =>
+  request(`/photos/${id}`, { method: "PATCH", body: JSON.stringify(patch) })
 ```
 
 バックエンドの `PATCH /photos/:id` は既に実装済み (`docs/design-notes.md` の API 表参照)。
