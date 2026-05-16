@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import type { GestureType } from "react-native-gesture-handler";
@@ -27,20 +27,23 @@ type PhotoItemProps = {
 function PhotoItem({ photo, album, left, top, w, h, cornerKind, onPhotoTap, parentTapRef }: PhotoItemProps) {
   const pressOpacity = useSharedValue(1);
 
-  let photoTap = Gesture.Tap()
-    .maxDistance(10)
-    .onBegin(() => {
-      pressOpacity.value = withTiming(0.85, { duration: 80 });
-    })
-    .onFinalize(() => {
-      pressOpacity.value = withTiming(1, { duration: 140 });
-    })
-    .onEnd((_, success) => {
-      if (success && onPhotoTap) runOnJS(onPhotoTap)(photo);
-    });
-  if (parentTapRef) {
-    photoTap = photoTap.blocksExternalGesture(parentTapRef);
-  }
+  const photoTap = useMemo(() => {
+    let g = Gesture.Tap()
+      .maxDistance(10)
+      .onBegin(() => {
+        pressOpacity.value = withTiming(0.85, { duration: 80 });
+      })
+      .onFinalize(() => {
+        pressOpacity.value = withTiming(1, { duration: 140 });
+      })
+      .onEnd((_, success) => {
+        if (success && onPhotoTap) runOnJS(onPhotoTap)(photo);
+      });
+    if (parentTapRef) {
+      g = g.blocksExternalGesture(parentTapRef);
+    }
+    return g;
+  }, [onPhotoTap, parentTapRef, photo, pressOpacity]);
 
   const pressedStyle = useAnimatedStyle(() => ({ opacity: pressOpacity.value }));
 
