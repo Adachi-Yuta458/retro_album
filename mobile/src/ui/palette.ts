@@ -30,6 +30,12 @@ export const colors = {
   glassBorder: "rgba(60,52,42,0.10)"
 };
 
+export const fonts = {
+  serif: "NotoSerifJP_400Regular"
+} as const;
+
+export type FontKey = keyof typeof fonts;
+
 export const cornerPalette = {
   kraft: { base: "#7d4f2a", shade: "#5a3920", highlight: "#9a6e4a" },
   gold:  { base: "#a88243", shade: "#6e5022", highlight: "#d4ae66" },

@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { SessionProvider, useSession } from "../src/lib/session";
 import { View, ActivityIndicator } from "react-native";
 import { colors } from "../src/ui/palette";
+import { useFonts, NotoSerifJP_400Regular } from "@expo-google-fonts/noto-serif-jp";
 
 function AuthGate() {
   const { state } = useSession();
@@ -35,6 +36,16 @@ function AuthGate() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({ NotoSerifJP_400Regular });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#fbf2dc" }}>
+        <ActivityIndicator color={colors.ink} />
+      </View>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

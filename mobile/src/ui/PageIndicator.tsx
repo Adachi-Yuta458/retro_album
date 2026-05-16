@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors } from "./palette";
+import { colors, fonts } from "./palette";
 
 type Props = {
   current: number;
@@ -55,6 +55,7 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 11,
     color: colors.inkSubtle,
-    letterSpacing: 0.6
+    letterSpacing: 0.6,
+    fontFamily: fonts.serif
   }
 });
