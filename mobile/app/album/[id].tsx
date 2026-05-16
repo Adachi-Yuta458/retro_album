@@ -188,6 +188,7 @@ export default function AlbumSpread() {
   };
 
   const onPhotoTap = useCallback((photo: PhotoDTO) => {
+    // Alert.prompt is iOS-only; spec accepts this trade-off (iOS-only app per README). Android requires a modal sheet — see spec §3-2.
     Alert.prompt(
       "かきこみ",
       "写真へのひとこと",
@@ -248,6 +249,17 @@ export default function AlbumSpread() {
     );
   }
 
+  const renderSpread = (page: PageDTO) => (
+    <SpreadPage
+      album={album}
+      page={page}
+      width={stageSize.w}
+      height={stageSize.h}
+      onPhotoTap={onPhotoTap}
+      parentTapRef={parentTapRef}
+    />
+  );
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0e0a06" }} edges={["top", "bottom"]}>
       <SpreadHeader
@@ -261,70 +273,21 @@ export default function AlbumSpread() {
           {stageSize.h > 0 ? (
             <View style={[styles.stage, { width: stageSize.w, height: stageSize.h }]}>
               {turning === "idle" || !targetPage ? (
-                currentPage ? (
-                  <SpreadPage
-                    album={album}
-                    page={currentPage}
-                    width={stageSize.w}
-                    height={stageSize.h}
-                    onPhotoTap={onPhotoTap}
-                    parentTapRef={parentTapRef}
-                  />
-                ) : null
+                currentPage ? renderSpread(currentPage) : null
               ) : (
                 <PageTurner
                   width={stageSize.w}
                   height={stageSize.h}
                   direction={turning}
                   topPage={
-                    turning === "next" ? (
-                      currentPage ? (
-                        <SpreadPage
-                          album={album}
-                          page={currentPage}
-                          width={stageSize.w}
-                          height={stageSize.h}
-                          onPhotoTap={onPhotoTap}
-                          parentTapRef={parentTapRef}
-                        />
-                      ) : null
-                    ) : (
-                      targetPage ? (
-                        <SpreadPage
-                          album={album}
-                          page={targetPage}
-                          width={stageSize.w}
-                          height={stageSize.h}
-                          onPhotoTap={onPhotoTap}
-                          parentTapRef={parentTapRef}
-                        />
-                      ) : null
-                    )
+                    turning === "next"
+                      ? (currentPage ? renderSpread(currentPage) : null)
+                      : (targetPage ? renderSpread(targetPage) : null)
                   }
                   bottomPage={
-                    turning === "next" ? (
-                      targetPage ? (
-                        <SpreadPage
-                          album={album}
-                          page={targetPage}
-                          width={stageSize.w}
-                          height={stageSize.h}
-                          onPhotoTap={onPhotoTap}
-                          parentTapRef={parentTapRef}
-                        />
-                      ) : null
-                    ) : (
-                      currentPage ? (
-                        <SpreadPage
-                          album={album}
-                          page={currentPage}
-                          width={stageSize.w}
-                          height={stageSize.h}
-                          onPhotoTap={onPhotoTap}
-                          parentTapRef={parentTapRef}
-                        />
-                      ) : null
-                    )
+                    turning === "next"
+                      ? (targetPage ? renderSpread(targetPage) : null)
+                      : (currentPage ? renderSpread(currentPage) : null)
                   }
                   onFinished={onTurnFinished}
                 />
