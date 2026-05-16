@@ -54,18 +54,25 @@
 - `SpreadFooter` への呼び出しを `onBackToShelf={goBackToShelf}` に変更。
 - ページめくりは後述のスワイプ + 既存の左右半分タップで担うため、フッターからは送れなくなる(意図通り)。
 
-### 3. スワイプでページめくり
+### 3. スワイプ・タップ複合ジェスチャ
 
 `mobile/app/album/[id].tsx`:
 
-- `react-native-gesture-handler` の `Gesture.Pan()` で `GestureDetector` を `stage` 周囲に配置する。
-- 終了判定:
-  - `Math.abs(translationX) > width * 0.25` または `Math.abs(velocityX) > 500` で確定。
+- `react-native-gesture-handler` で `Gesture.Pan()` と `Gesture.Tap()` を `Gesture.Exclusive(panGesture, tapGesture)` で合成し、`<GestureDetector>` を `stage` を囲むように配置する。`tapLayer` View overlay は廃止する(旧設計から変更)。
+- Pan 終了判定:
+  - `activeOffsetX([-15, 15])` で 15px 以上の横方向移動でアクティブ化。
+  - `failOffsetY([-10, 10])` で 10px 以上の縦方向移動が先にあれば Pan を失敗させる(縦スクロール誤発火の予防)。
+  - 終了時の閾値: `Math.abs(translationX) > pageWidth * 0.25` または `Math.abs(velocityX) > 500`。
   - `translationX < 0`(左方向に動かした) → `turn("next")`。
   - `translationX > 0` → `turn("prev")`。
-- ジェスチャ中(まだ閾値未達)は視覚的フィードバックを出さない(MVP)。確定時は既存の `PageTurner` のアニメに乗せる。
-- 既存の `tapLayer`(左右半分タップ判定) は残す。`Gesture.Tap()` と `Gesture.Pan()` を `Gesture.Race()` または `Gesture.Exclusive()` で合成するのではなく、`tapLayer` は既存の `onTouchEnd` のままにし、`stage` 内側に `GestureDetector` をネストして両者が干渉しないか確認(タップは onTouchEnd、Pan は GestureDetector 配下なので競合は最小)。
-- `turning !== "idle"` のときは Pan を無視する。
+- Tap 判定:
+  - `maxDistance(10)` で 10px 以内のタップのみ確定。Pan が先にアクティブ化したらこちらは発火しない (`Gesture.Exclusive` の挙動)。
+  - `e.x < pageWidth / 2` → `turn("prev")`、それ以外 → `turn("next")`。
+- 両ジェスチャとも `.runOnJS(true)` を指定する(コールバック内で React state を更新するため)。
+- `turning !== "idle"` のときは `turn()` 関数の早期 return ガードで動作を抑制する。Pan/Tap 自体は引き続き受け付けるが、no-op になる。
+- ジェスチャ中(閾値未達)のページ追随アニメは MVP では実装しない。確定時に既存の `PageTurner` アニメへ受け渡す。
+
+副作用: 検出領域は `<GestureDetector>` が包む `stage` の矩形サイズに等しい。旧 `tapLayer` は `top:60 bottom:78` で header と footer 以外の領域全体をカバーしていたが、新方式では `stage` 高さ(= `pageHeight`)のみ。下部の PageIndicator や safe-area 余白上では paging タップは反応しない (これは仕様)。
 
 ### 4. ページインジケーター(新規)
 
