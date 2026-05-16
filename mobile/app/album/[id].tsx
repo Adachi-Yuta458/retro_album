@@ -118,10 +118,10 @@ export default function AlbumSpread() {
 
   const composedGesture = Gesture.Exclusive(panGesture, tapGesture);
 
-  const onTurnFinished = () => {
+  const onTurnFinished = useCallback(() => {
     setPageIdx((idx) => (turning === "next" ? idx + 1 : turning === "prev" ? idx - 1 : idx));
     setTurning("idle");
-  };
+  }, [turning]);
 
   const onAddPhoto = async () => {
     if (!album || !currentPage) return;

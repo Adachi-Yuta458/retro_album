@@ -44,7 +44,13 @@ export function PageTurner({
   }, [direction, onFinished, progress]);
 
   const flipStyle = useAnimatedStyle(() => {
-    if (direction === "idle") return { opacity: 1 };
+    if (direction === "idle") {
+      return {
+        transform: [{ perspective: 1400 }, { rotateY: "0deg" }],
+        shadowOpacity: 0,
+        shadowOffset: { width: 0, height: 4 }
+      };
+    }
     const angle = direction === "next"
       ? -progress.value * MAX_ANGLE
       : -(1 - progress.value) * MAX_ANGLE;
