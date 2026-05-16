@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -19,6 +19,7 @@ import Animated, {
   withTiming
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import type { GestureType } from "react-native-gesture-handler";
 import { api, AlbumDTO, PageDTO, PhotoDTO } from "../../src/lib/api";
 import { colors, themeToPaper, themeToCorner } from "../../src/ui/palette";
 import { SpreadHeader, SpreadFooter } from "../../src/ui/SpreadChrome";
@@ -45,6 +46,7 @@ export default function AlbumSpread() {
   const [insertingPhotoId, setInsertingPhotoId] = useState<number | null>(null);
   const insertScale = useSharedValue(0);
   const insertOpacity = useSharedValue(0);
+  const parentTapRef = useRef<GestureType | undefined>(undefined);
 
   const load = useCallback(async () => {
     const res = await api.album(albumId);
@@ -100,6 +102,7 @@ export default function AlbumSpread() {
   const tapGesture = Gesture.Tap()
     .runOnJS(true)
     .maxDistance(10)
+    .withRef(parentTapRef)
     .onEnd((e, success) => {
       if (!success) return;
       if (e.x < stageSize.w / 2) turn("prev");
@@ -184,6 +187,42 @@ export default function AlbumSpread() {
     }
   };
 
+  const onPhotoTap = useCallback((photo: PhotoDTO) => {
+    Alert.prompt(
+      "かきこみ",
+      "写真へのひとこと",
+      [
+        { text: "やめる", style: "cancel" },
+        {
+          text: "ほぞん",
+          onPress: async (text?: string) => {
+            const next = (text ?? "").trim();
+            try {
+              await api.updatePhoto(photo.id, { caption: next || null });
+            } catch (e: any) {
+              Alert.alert("ほぞんに失敗しました", e?.body?.error || "");
+              return;
+            }
+            setAlbum((a) => {
+              if (!a) return a;
+              return {
+                ...a,
+                pages: a.pages.map((p) => ({
+                  ...p,
+                  photos: p.photos.map((ph) =>
+                    ph.id === photo.id ? { ...ph, caption: next || null } : ph
+                  )
+                }))
+              };
+            });
+          }
+        }
+      ],
+      "plain-text",
+      photo.caption || ""
+    );
+  }, []);
+
   const onAddPage = async () => {
     if (!album) return;
     try {
@@ -223,7 +262,14 @@ export default function AlbumSpread() {
             <View style={[styles.stage, { width: stageSize.w, height: stageSize.h }]}>
               {turning === "idle" || !targetPage ? (
                 currentPage ? (
-                  <SpreadPage album={album} page={currentPage} width={stageSize.w} height={stageSize.h} />
+                  <SpreadPage
+                    album={album}
+                    page={currentPage}
+                    width={stageSize.w}
+                    height={stageSize.h}
+                    onPhotoTap={onPhotoTap}
+                    parentTapRef={parentTapRef}
+                  />
                 ) : null
               ) : (
                 <PageTurner
@@ -232,16 +278,52 @@ export default function AlbumSpread() {
                   direction={turning}
                   topPage={
                     turning === "next" ? (
-                      currentPage ? <SpreadPage album={album} page={currentPage} width={stageSize.w} height={stageSize.h} /> : null
+                      currentPage ? (
+                        <SpreadPage
+                          album={album}
+                          page={currentPage}
+                          width={stageSize.w}
+                          height={stageSize.h}
+                          onPhotoTap={onPhotoTap}
+                          parentTapRef={parentTapRef}
+                        />
+                      ) : null
                     ) : (
-                      targetPage ? <SpreadPage album={album} page={targetPage} width={stageSize.w} height={stageSize.h} /> : null
+                      targetPage ? (
+                        <SpreadPage
+                          album={album}
+                          page={targetPage}
+                          width={stageSize.w}
+                          height={stageSize.h}
+                          onPhotoTap={onPhotoTap}
+                          parentTapRef={parentTapRef}
+                        />
+                      ) : null
                     )
                   }
                   bottomPage={
                     turning === "next" ? (
-                      targetPage ? <SpreadPage album={album} page={targetPage} width={stageSize.w} height={stageSize.h} /> : null
+                      targetPage ? (
+                        <SpreadPage
+                          album={album}
+                          page={targetPage}
+                          width={stageSize.w}
+                          height={stageSize.h}
+                          onPhotoTap={onPhotoTap}
+                          parentTapRef={parentTapRef}
+                        />
+                      ) : null
                     ) : (
-                      currentPage ? <SpreadPage album={album} page={currentPage} width={stageSize.w} height={stageSize.h} /> : null
+                      currentPage ? (
+                        <SpreadPage
+                          album={album}
+                          page={currentPage}
+                          width={stageSize.w}
+                          height={stageSize.h}
+                          onPhotoTap={onPhotoTap}
+                          parentTapRef={parentTapRef}
+                        />
+                      ) : null
                     )
                   }
                   onFinished={onTurnFinished}
@@ -274,7 +356,7 @@ export default function AlbumSpread() {
       <SpreadFooter
         onBackToShelf={goBackToShelf}
         onPhoto={onAddPhoto}
-        onWrite={() => Alert.alert("かきこみ", "次のアップデートで対応します。")}
+        onWrite={() => Alert.alert("かきこみ", "写真をタップしてかきこみできます。")}
         onSticker={() => Alert.alert("シール", "次のアップデートで対応します。")}
       />
 
