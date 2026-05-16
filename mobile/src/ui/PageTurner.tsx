@@ -8,7 +8,8 @@ import Animated, {
   withTiming
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { palette, PaperKind } from "./palette";
+import type { PaperKind } from "./palette";
+import { PaperBg } from "./PaperBg";
 
 type Props = {
   width: number;
@@ -73,8 +74,6 @@ export function PageTurner({
     };
   });
 
-  const backColor = palette[frontPaperKind].base;
-
   return (
     <View style={{ width, height }}>
       {/* bottom (revealed) page */}
@@ -112,17 +111,18 @@ export function PageTurner({
         <View style={[StyleSheet.absoluteFill, { backfaceVisibility: "hidden" }]}>
           {topPage}
         </View>
-        {/* back face — flat paper color, rotated 180° in-place; visible after 90° */}
+        {/* back face — paper-textured (base color + paper noise), rotated 180° in-place; visible after 90° */}
         <View
           style={[
             StyleSheet.absoluteFill,
             {
               backfaceVisibility: "hidden",
-              transform: [{ rotateY: "180deg" }],
-              backgroundColor: backColor
+              transform: [{ rotateY: "180deg" }]
             }
           ]}
-        />
+        >
+          <PaperBg kind={frontPaperKind} style={StyleSheet.absoluteFillObject} />
+        </View>
       </Animated.View>
     </View>
   );
