@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import type { GestureType } from "react-native-gesture-handler";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { PaperBg } from "./PaperBg";
 import { BindingHoles } from "./BindingHoles";
 import { HeldPhoto } from "./HeldPhoto";
@@ -28,7 +28,6 @@ function PhotoItem({ photo, album, left, top, w, h, cornerKind, onPhotoTap, pare
   const pressOpacity = useSharedValue(1);
 
   let photoTap = Gesture.Tap()
-    .runOnJS(true)
     .maxDistance(10)
     .onBegin(() => {
       pressOpacity.value = withTiming(0.85, { duration: 80 });
@@ -37,7 +36,7 @@ function PhotoItem({ photo, album, left, top, w, h, cornerKind, onPhotoTap, pare
       pressOpacity.value = withTiming(1, { duration: 140 });
     })
     .onEnd((_, success) => {
-      if (success) onPhotoTap?.(photo);
+      if (success && onPhotoTap) runOnJS(onPhotoTap)(photo);
     });
   if (parentTapRef) {
     photoTap = photoTap.blocksExternalGesture(parentTapRef);
