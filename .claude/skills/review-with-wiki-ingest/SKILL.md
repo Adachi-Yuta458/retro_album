@@ -1,7 +1,9 @@
 ---
 name: review-with-wiki-ingest
-description: Use when reviewing the current branch against its base branch and the repository has a .wiki/ directory — runs a wiki-aware code review that REQUIRES interactive Q&A with the user for every uncertainty and feeds the resulting Q&A back into the wiki via /wiki:ingest. Triggers on 「レビューして」「ブランチレビュー」「差分レビュー」「wikiを踏まえてレビュー」 when working on a feature/fix branch.
+description: Use when reviewing the current branch against its base branch in a repository that has a .wiki/ directory and the change touches domain logic (not just typos/formatting). Triggers on 「レビューして」「ブランチレビュー」「差分レビュー」「wikiを踏まえてレビュー」 on a feature/fix branch.
 ---
+
+> **⚠️ Deprecated (2026-05-17):** This SKILL is superseded by the `mental-model-reviewer` plugin (`/wiki-review`). It is kept here during the coexistence period (target removal: when 5 successful `/wiki-review` runs have produced equivalent or better reviews on this project). Until then, both work; prefer `/wiki-review` for new reviews.
 
 # review-with-wiki-ingest
 
@@ -15,9 +17,11 @@ description: Use when reviewing the current branch against its base branch and t
 
 ## When to use
 
-- カレントブランチを base branch とdiffしてレビューを求められたとき
-- `./.wiki/` が存在し、変更領域に関連するドキュメントが存在し得るとき
-- 単発のコード品質チェックではなく、ドメイン文脈込みのレビューが必要なとき
+カレントブランチを base branch と diff してレビューを求められ、かつ `./.wiki/` が存在する状況で、以下のいずれかを満たすとき:
+
+- 変更ファイルが domain logic 領域 (models / services / business rules / external integrations 等) を含む
+- CLAUDE.md / README / `./.wiki/_index.md` に登録されたドメイン用語・業務用語・外部システム名が変更箇所 (コード or コミットメッセージ) に出現する
+- ユーザーが「wiki も踏まえて」「wikiを参照して」など明示的に wiki 利用を指示している
 
 ## When NOT to use
 
@@ -25,7 +29,11 @@ description: Use when reviewing the current branch against its base branch and t
 - 1ファイル数行の機械的修正のみ（typo、フォーマッタ適用など）でドメイン論点が無い差分
 - ユーザーが「質問せず一気にレビューだけ書いて」と明示した場合（feedbackが優先）
 
-## The Iron Law
+## The Iron Laws
+
+この skill には 2 つの絶対遵守ルールがある。両方守らないと skill の目的は達成されない。
+
+### Law 1: Q&A discipline
 
 ```
 不明点・疑問点・気になる点は、レビューに書くのではなくユーザーに聞け。
@@ -40,25 +48,51 @@ description: Use when reviewing the current branch against its base branch and t
 
 このルールに違反したレビューは、レビューとして提出してはならない。Q&Aを完了させてから提出する。
 
+### Law 2: Ingest discipline
+
+```
+Q&A が 1 件でも発生したら、レビュー提出と同ターンで wiki に ingest せよ。
+セッションを跨いだ ingest は、永遠に行われない。
+```
+
+**No exceptions:**
+- 「Q&A が 1 件しかない」→ 件数は理由にならない。1 件でも知見は知見
+- 「次回まとめて ingest する」→ 次回そのセッションは無い。今やる
+- 「ユーザーが急いでいる」→ ingest は 1 回の Skill 呼び出し。秒で終わる
+- 「--local は付けなくても多分大丈夫」→ 出力パスを必ず確認。`.wiki/raw/notes/` でなく `~/wiki/raw/notes/` だったら HUB 事故
+- 「ingest できたっぽいので報告は省略」→ 実ファイルパスをユーザーに開示するまでが ingest
+
+このルールに違反した skill 完了は、完了として報告してはならない。ingest と実パス確認を済ませてから報告する。
+
 ## Workflow
 
 ### Phase 1: Diff 収集とベース判定
 
-1. base branch を `git merge-base` ベースで自動判定する：
-   ```bash
-   # 上流追跡があればそれを優先
-   git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null
-   # 無ければ origin/main をベース候補にする
-   git merge-base HEAD origin/main
-   ```
-   候補が複数あったり判定が曖昧なときは、ユーザーに聞く。
+1. base branch を以下の優先順位で判定する：
+   1. **リモートのデフォルトブランチ**（最優先）:
+      ```bash
+      git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null
+      # 例: refs/remotes/origin/main → origin/main を base 候補に
+      ```
+   2. **上流追跡ブランチ**: `git rev-parse --abbrev-ref --symbolic-full-name @{u}` の結果が `origin/main` / `origin/master` / `origin/develop` のいずれかなら採用。**それ以外（別 feature branch を fork した PR チェーンの中継点など）は base ではなく分岐元として扱い、採用しない。**
+   3. **フォールバック探索**: `origin/main` → `origin/master` → `origin/develop` の順で `git rev-parse --verify` し、最初に見つかったものを採用。
+   4. **リモートが origin でない repo**: `git remote` で全リモートを列挙し、各リモートに対し 1-3 を適用。複数リモートに該当した場合は曖昧と判断。
+
+   いずれの段階でも候補が複数あるか曖昧なときは、推測せずユーザーに聞く。判定した base と判定根拠 (どの優先順位で決まったか) を 1 行でユーザーに開示してから次に進む。
+
+   merge-base 計算: `git merge-base HEAD <決定した base>`
 2. diff を取得：
    ```bash
    git diff <merge-base>...HEAD --stat
    git diff <merge-base>...HEAD
    git log --oneline <merge-base>..HEAD
    ```
-3. 変更ファイル一覧から「ドメイン領域」を抽出する（例: `app/models/orders/`, `app/forms/lc_*`, `app/lib/integrations/kintone/` などコード上の領域や、CLAUDE.md の用語対応表上のドメイン用語）。
+3. 変更ファイル一覧から「ドメイン領域」を抽出する。具体的には以下：
+   - 変更ファイルの 2-3 階層上のディレクトリ名（多くの場合ドメイン単位を示す。例: 何らかの `models/<entity>/`, `services/<domain>/`, `integrations/<external-system>/`）
+   - CLAUDE.md / README に出てくる業務用語・固有名詞・外部システム名
+   - コミットメッセージや diff 内コメントに出てくるドメイン語
+   
+   このプロジェクト固有の領域名を skill 側にハードコードしない。実際の変更内容から都度抽出する。
 
 ### Phase 2: Wiki の関連箇所を読む
 
@@ -85,9 +119,26 @@ description: Use when reviewing the current branch against its base branch and t
 質問バケットが空なら Phase 5 へ。1件でもあれば必ず実施。
 
 - **AskUserQuestion ツール**で質問する。1ターンで複数 question にまとめてよい（最大4）。それを超えるなら複数ターンに分ける。
-- 質問は具体的に（ファイル・行・該当コード片を引用）。「なぜこうしたのか?」より「Aではなく Bにした理由は X か Y か?」のように選択肢を提示すると速い。
+- 質問は具体的に（ファイル・行・該当コード片を引用）。「なぜこうしたのか?」より「A ではなく B にした理由は X か Y か?」のように**選択肢を提示**すると速い。各 option には `label` と `description` を付け、想定回答ごとに後続アクション (現状維持 / 追加修正 / バグ確定 など) を予告しておくとユーザーが即答しやすい。
 - 回答後に新たな疑問が湧いたら追加質問する。**「最初の質問セットで打ち切る」のは禁止。**
 - 全Q&Aを `Q: ... / A: ...` 形式で記録（後の ingest 用）。
+
+**呼び出し例（コードを引用しつつ選択肢を提示するパターン）:**
+
+```
+AskUserQuestion(questions=[{
+  "question": "src/api/orders.ts:42 で catch ブロックが return null になっている。これは意図的?",
+  "header": "Error 握り潰し",
+  "multiSelect": false,
+  "options": [
+    {"label": "意図的: フロントが null で再 fetch をトリガー", "description": "現状維持で OK"},
+    {"label": "意図的だがログは欲しい",                  "description": "logger.warn 追加を Findings に入れる"},
+    {"label": "バグ: 上に throw すべき",                  "description": "throw に修正する指摘を Findings に入れる"}
+  ]
+}])
+```
+
+複数の独立した疑問は同じ呼び出しに `questions` 配列で 4 件まで束ねる（並列化）。連動する疑問 (回答次第で次の質問内容が決まる) は分けて複数ターン。
 
 ### Phase 5: レビュー提出
 
@@ -99,72 +150,124 @@ description: Use when reviewing the current branch against its base branch and t
 
 Q&Aがゼロ件のとき以外、必ず以下を実施する。「ユーザーが急いでいる」「Q&Aが些細」などは ingest をスキップする理由にならない。
 
-> **重要:** `/wiki:ingest` は plugin slash command で、`Skill` ツールからは呼べない（available skills リストに無いため）。`Bash` で `claude` CLI を起動するのも別セッションになり不可。**正しい方法は「slash command の定義ファイル `commands/ingest.md` を Read し、その指示プロンプトを assistant 自身が実行する」こと。** slash command の正体は assistant 用プロンプトファイルなので、これで slash command 実行と同等の結果になる。
+> **重要:** plugin で提供されている `/wiki:ingest` の実体は `wiki:ingest` skill。**`Skill` ツールから直接呼び出す**のが正規ルート。`commands/ingest.md` を Read して assistant 自身が ingest 処理を再実装してはいけない（責務が壊れる・脆い・plugin 更新に追従できない）。
 
-1. **Q&A をファイル化:** Q&A をマークダウンにまとめて `/tmp/review-qa-<YYYY-MM-DD>-<topic-slug>.md` に書き出す。タイトル例: `営業所専用ページ Oracle スキーマ更新 - レビュー Q&A`。本文には以下を含める：
-   - レビュー対象のブランチ名・ベース・主要な変更領域
-   - Q&A 本文（質問と回答を対にする）
-   - 回答から導かれた「今後のレビューで使える前提・制約」のまとめ
-   - 末尾に `[[review-with-wiki-ingest]]` 等の関連 skill へのリンク
+1. **Q&A をファイル化:** Q&A をマークダウンにまとめて `/tmp/review-qa-<YYYY-MM-DD>-<topic-slug>.md` に書き出す。タイトル例: `<ドメイン領域> <変更内容> - レビュー Q&A`。
 
-2. **ingest コマンド定義を読み込む:** 以下の Glob で wiki ingest コマンド定義を探し、Read する。
+   **テンプレート（コピペして埋める）:**
+
+   ```markdown
+   # <ドメイン領域> <変更内容> - レビュー Q&A
+
+   - **Branch:** <feature/fix branch 名>
+   - **Base:** <base branch> (merge-base: <短縮 SHA>)
+   - **Date:** <YYYY-MM-DD>
+   - **Main change areas:** <Phase 1-3 で抽出したドメイン領域のリスト>
+
+   ## Q&A
+
+   ### Q1: <一行サマリ>
+   **Q:** <質問本文。ファイル:行・該当コード片を引用>
+   **A:** <ユーザー回答をそのまま>
+
+   ### Q2: ...
+
+   ## Derived constraints / assumptions for future reviews
+
+   - <制約 1: 「次回似たレビューで判断材料になる前提」を抽出して書く>
+   - <制約 2>
+   - ...
+
+   ## Related
+
+   - [[review-with-wiki-ingest]]
+   - <関連 wiki 記事へのリンクがあれば>
    ```
-   Glob: ~/.claude/plugins/marketplaces/*/commands/ingest.md
-   ```
-   - 通常 `marketplaces/llm-wiki/claude-plugin/commands/ingest.md` がヒット。
-   - 複数ヒットしたら最新版（`cache/llm-wiki/<version>/` で version が最大のもの）か marketplaces 版を選ぶ。両者は同期している前提。
 
-3. **指示プロンプトを自分で実行する:** Read した `ingest.md` の本文（"Your task" 以降）は assistant 用プロンプトそのもの。次の引数を `$ARGUMENTS` として実行する。
-   ```
-   $ARGUMENTS = "<Q&Aファイルの絶対パス> --type notes --title \"<タイトル>\" --local"
-   ```
-   `--local` は **必須**（プロジェクトの `.wiki/` を対象にする。これを忘れると HUB に入る事故）。`ingest.md` の手順に従い、`references/ingestion.md` および `references/wiki-structure.md` も必要に応じて Read して、最終的に `.wiki/raw/notes/<date>-<slug>.md` への書き出し・`.wiki/log.md` への追記・`.wiki/_index.md` の Sources/Recent Changes 更新まで自分で実行する。
+   **Derived constraints セクションは必須。** 生 Q&A だけでは検索しても再利用しにくい。「将来このリポジトリで類似の判断が必要になったとき何を知っていれば即決できるか」を 1-3 行で抽出する。
 
-4. **完了報告:** 書き出されたファイルパス（例: `.wiki/raw/notes/2026-05-15-...-review-qa.md`）をユーザーに報告。「wiki に取り込みました」だけでなく実ファイルパスを示す。
+   **永続性に関する注意:** `/tmp` は macOS で再起動時に消える可能性がある領域。**step 2 の ingest が成功して `.wiki/raw/notes/<...>.md` への書き出しがパスとして確認できるまで、`/tmp` のファイルを削除しない・セッションを閉じない**。ingest 失敗 (skill 不在 / `--local` 忘れで HUB 行き / 引数エラー等) のリカバリはこのファイルから行う。
 
-**Fallback:** `commands/ingest.md` が見つからない・指示プロンプトの遂行で詰まる等の場合のみ、ユーザーに `/wiki:ingest <filepath> --type notes --title "..." --local` を手で実行してもらう旨を案内する（最後の手段）。
+2. **`wiki:ingest` skill を `Skill` ツールで呼ぶ:**
+   ```
+   Skill(
+     skill="wiki:ingest",
+     args="<Q&Aファイルの絶対パス> --type notes --title \"<タイトル>\" --local"
+   )
+   ```
+   - `--local` は **必須**。プロジェクトの `.wiki/` を対象にする。これを忘れると HUB (`~/wiki/`) にプロジェクト固有のドメイン情報・コード断片が混入する事故になる。具体的な影響:
+     - 他プロジェクトを開いたとき、無関係な記事が `wiki:query` で検索ヒットしてノイズ化
+     - HUB を他者と共有・公開している場合、想定外の情報漏洩リスク
+     - 後から該当エントリを HUB から退避する手作業が発生（`wiki:retract` で消せるが完璧ではない）
+   - `--type notes` で `.wiki/raw/notes/<date>-<slug>.md` に raw notes として取り込まれる。
+   - skill 側で `.wiki/log.md` 追記・`.wiki/_index.md` の Sources/Recent Changes 更新まで行われる。assistant 側で個別に書き込む必要は無い。
+
+3. **完了報告:** `wiki:ingest` が書き出したファイルパス（例: `.wiki/raw/notes/2026-05-15-...-review-qa.md`）をユーザーに報告。「wiki に取り込みました」だけでなく実ファイルパスを示す。
+
+**Fallback:** `Skill` ツールで `wiki:ingest` が見つからない / 呼び出しに失敗した場合のみ、ユーザーに `/wiki:ingest <filepath> --type notes --title "..." --local` を手で実行してもらう旨を案内する（最後の手段）。
 
 ## Quick Reference
 
 | やること | コマンド／ツール |
 |---|---|
-| ベース判定 | `git merge-base HEAD origin/main` |
+| ベース判定 | `git symbolic-ref refs/remotes/origin/HEAD` → 上流追跡 → `origin/{main,master,develop}` フォールバック (Phase 1 参照)。最後に `git merge-base HEAD <base>` |
 | 差分取得 | `git diff <base>...HEAD` |
 | wiki 構造把握 | `Read .wiki/_index.md`, `Read .wiki/wiki/_index.md` |
 | 関連 wiki 検索 | `Glob`, `Grep` on `./.wiki/` |
 | 質問 | `AskUserQuestion` ツール（最大4問/ターン、複数ターン可） |
-| 知識化 | `Read ~/.claude/plugins/.../commands/ingest.md` → 指示プロンプトを `$ARGUMENTS = "<filepath> --type notes --title \"...\" --local"` で自分で実行 |
+| 知識化 | `Skill(skill="wiki:ingest", args="<filepath> --type notes --title \"...\" --local")` |
 
-## Red Flags — STOP し Phase 4 に戻る
+## Red Flags
+
+頭に浮かんだら STOP し、対応 Phase に戻る。skill の目的は「推測レビューの構造的排除」と「Q&A 知識の確実な累積」の両立。
+
+### Phase 4 (Q&A discipline) に戻るべき思考
 
 - 「とりあえずレビュー書いてから後で聞こう」
 - 「これは明らかだから聞かなくていい」
 - 「ユーザーを煩わせたくないから推測で書く」
 - 「質問が多すぎるので主要な物だけ聞く」
-- 「Q&Aが少ないので ingest は省略」
-- 「wiki を読まずにコードだけ見れば足りる」
+- 「wiki を読まずにコードだけ見れば足りる」 → Phase 2 にも戻る
 
-これらが頭に浮かんだ時点で Phase 2 または Phase 4 に戻る。skill の目的は推測レビューを構造的に排除することにある。
+### Phase 6 (ingest discipline) に戻るべき思考
+
+- 「Q&A が 1 件しかないので ingest は省略」
+- 「今急いでいるから ingest は次回まとめて」
+- 「`--local` は付け忘れたけど多分動いてる」
+- 「ingest が走ったので元の `/tmp` ファイルは消して良い」
+- 「ingest 完了報告に実ファイルパスは要らない」
+- 「`commands/ingest.md` を Read して自分で書けば早そう」
 
 ## Rationalization Table
+
+### Q&A 側
 
 | 言い訳 | 実態 |
 |---|---|
 | 「自明なバグだから聞くまでもない」 | 意図的な選択 or 既知の制約のことが多い。聞く方が速い |
 | 「wiki に該当が無さそう」 | 実際に Read で見たか? 見ていないならスキップしてはいけない |
-| 「Q&Aが1件しかないから ingest 不要」 | 1件でも要件は ingest 必須。例外なし |
 | 「ユーザーが急いでいる」 | 推測でズレたレビュー → 出戻りの方が遅い |
 | 「もう似た内容が wiki にある」 | 似ていても新ブランチ固有の判断は別の知見。差分を残す |
 | 「対話で長くなりそう」 | AskUserQuestion で 1ターンに 4 質問まで束ねられる。並列化せよ |
+
+### Ingest 側
+
+| 言い訳 | 実態 |
+|---|---|
+| 「Q&Aが 1 件しかないから ingest 不要」 | 1 件でも要件は ingest 必須。例外なし |
+| 「`--local` 忘れたけど多分動いてる」 | 出力パスを必ず確認。`.wiki/raw/notes/` でなく `~/wiki/raw/notes/` だったら HUB 事故 |
+| 「ingest 後の実ファイルパスは伝えなくても良い」 | パスを示さないと「local に入ったか」「どこを見れば再利用できるか」が伝わらない。必須 |
+| 「ingest が成功したっぽいので `/tmp` の元ファイルは消して良い」 | 確認するまで消さない。再試行できなくなる |
+| 「次回まとめて ingest する」 | セッションを跨いだ ingest は永遠に行われない。今やる |
 
 ## Common Mistakes
 
 - **wiki を Glob しただけで読まずに判断する** → 必ず Read する
 - **質問せずに「？」付きで本文に書く** → レビュー本文に疑問符は残さない。質問は AskUserQuestion 経由
 - **Q&A の ingest を「後でやる」** → セッションが切れたら永久に失われる。レビュー提出と同ターンで ingest
-- **Q&A 要約を機械翻訳的に書く** → 「次回レビューで使える前提・制約」を抽出して書くこと。生Q&Aだけだと検索しても再利用しにくい
+- **raw Q&A をコピペするだけで `Derived constraints` セクションを書かない** → 生 Q&A 単体だと将来検索しても再利用しにくい。Q&A から「次回類似レビューで即決材料になる前提・制約」を 1-3 行抽出して必ず書く (テンプレ参照)
 - **`/wiki:ingest` に `--local` を付け忘れる** → プロジェクトの `.wiki/` ではなく HUB に入る事故になる
-- **`/wiki:ingest` を `Skill` ツールで呼ぼうとする** → slash command は Skill ツール対象外。`commands/ingest.md` を Read して指示プロンプトを自分で実行する（Phase 6 参照）
+- **`commands/ingest.md` を Read して自前で ingest 処理を再実装する** → `wiki:ingest` は available skills に含まれており `Skill` ツールから直接呼べる。再実装は脆く、plugin 更新に追従できず、責務分離も壊れる（Phase 6 参照）
 - **ingest をユーザーに丸投げする** → Fallback。基本は自分で実行。ユーザーに依頼するのは詰まったときだけ
 
 ## Completion Checklist
@@ -175,5 +278,5 @@ skill 終了時、以下が全て満たされているか確認：
 - [ ] `./.wiki/` の関連ページを実際に Read で読んだ（または該当無しを確認した）
 - [ ] 不明点・疑問点・気になる点を **1件残らず** AskUserQuestion でユーザーに確認した
 - [ ] レビュー本文には推測・疑問は残っていない
-- [ ] Q&Aが1件以上あったなら、`commands/ingest.md` を Read → 指示プロンプトを自分で実行 → `.wiki/raw/notes/` への書き出し完了を確認した（`--local` 必須）
+- [ ] Q&Aが1件以上あったなら、`Skill(skill="wiki:ingest", ...)` で wiki に取り込み、`.wiki/raw/notes/` への書き出し完了を確認した（`--local` 必須）
 - [ ] ユーザーに「レビュー完了」「wiki ingest 完了（書き出しパス: ...）」を報告した
