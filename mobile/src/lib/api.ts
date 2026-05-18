@@ -83,6 +83,6 @@ export const api = {
     });
     return request(`/pages/${pageId}/photos`, { method: "POST", body: form }) as Promise<{ photo: PhotoDTO }>;
   },
-  updatePhoto: (id: number, patch: Partial<PhotoDTO>): Promise<{ photo: PhotoDTO }> =>
+  updatePhoto: (id: number, patch: Pick<PhotoDTO, "caption">): Promise<{ photo: PhotoDTO }> =>
     request(`/photos/${id}`, { method: "PATCH", body: JSON.stringify(patch) })
 };
