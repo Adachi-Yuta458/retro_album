@@ -1,8 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import type { GestureType } from "react-native-gesture-handler";
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
 import { PaperBg } from "./PaperBg";
 import { BindingHoles } from "./BindingHoles";
 import { HeldPhoto } from "./HeldPhoto";
@@ -22,10 +22,21 @@ type PhotoItemProps = {
   cornerKind: CornerKind;
   onPhotoTap?: (photo: PhotoDTO) => void;
   parentTapRef?: React.MutableRefObject<GestureType | undefined>;
+  successPhotoId?: number | null;
 };
 
-function PhotoItem({ photo, album, left, top, w, h, cornerKind, onPhotoTap, parentTapRef }: PhotoItemProps) {
+function PhotoItem({ photo, album, left, top, w, h, cornerKind, onPhotoTap, parentTapRef, successPhotoId }: PhotoItemProps) {
   const pressOpacity = useSharedValue(1);
+
+  // Fire a brief dim-flash pulse when this photo's caption save succeeds.
+  useEffect(() => {
+    if (successPhotoId === photo.id) {
+      pressOpacity.value = withSequence(
+        withTiming(0.55, { duration: 80 }),
+        withTiming(1, { duration: 220 })
+      );
+    }
+  }, [successPhotoId, photo.id, pressOpacity]);
 
   const photoTap = useMemo(() => {
     let g = Gesture.Tap()
@@ -93,9 +104,10 @@ type Props = {
   height: number;
   onPhotoTap?: (photo: PhotoDTO) => void;
   parentTapRef?: React.MutableRefObject<GestureType | undefined>;
+  successPhotoId?: number | null;
 };
 
-export function SpreadPage({ album, page, width, height, onPhotoTap, parentTapRef }: Props) {
+export function SpreadPage({ album, page, width, height, onPhotoTap, parentTapRef, successPhotoId }: Props) {
   const paperKind: PaperKind = (page.paper_kind as PaperKind) || themeToPaper(album.theme);
   const cornerKind: CornerKind = themeToCorner(album.theme);
   // Photos area: leave room for binding (left) and footer (bottom is handled outside)
@@ -139,6 +151,7 @@ export function SpreadPage({ album, page, width, height, onPhotoTap, parentTapRe
             cornerKind={cornerKind}
             onPhotoTap={onPhotoTap}
             parentTapRef={parentTapRef}
+            successPhotoId={successPhotoId}
           />
         );
       })}

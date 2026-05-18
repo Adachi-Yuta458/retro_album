@@ -42,6 +42,7 @@ export default function AlbumSpread() {
   const [pageIdx, setPageIdx] = useState(0);
   const [turning, setTurning] = useState<"next" | "prev" | "idle">("idle");
   const [busyAddingPhoto, setBusyAddingPhoto] = useState(false);
+  const [successPhotoId, setSuccessPhotoId] = useState<number | null>(null);
   // When a new photo is added, animate it sliding into the corners.
   const [insertingPhotoId, setInsertingPhotoId] = useState<number | null>(null);
   const insertScale = useSharedValue(0);
@@ -215,6 +216,9 @@ export default function AlbumSpread() {
               Alert.alert("ほぞんに失敗しました", e?.body?.error || "");
               return;
             }
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            setSuccessPhotoId(photo.id);
+            setTimeout(() => setSuccessPhotoId(null), 350);
             setAlbum((a) => {
               if (!a) return a;
               return {
@@ -268,6 +272,7 @@ export default function AlbumSpread() {
       height={stageSize.h}
       onPhotoTap={onPhotoTap}
       parentTapRef={parentTapRef}
+      successPhotoId={successPhotoId}
     />
   );
 
