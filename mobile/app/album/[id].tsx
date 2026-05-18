@@ -80,7 +80,7 @@ export default function AlbumSpread() {
     );
   }, []);
 
-  const turn = (dir: "next" | "prev") => {
+  const turn = useCallback((dir: "next" | "prev") => {
     if (turning !== "idle") return;
     const next = dir === "next" ? pageIdx + 1 : pageIdx - 1;
     if (next < 0 || next >= pages.length) {
@@ -89,12 +89,12 @@ export default function AlbumSpread() {
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
     setTurning(dir);
-  };
+  }, [turning, pageIdx, pages.length]);
 
   const SWIPE_DISTANCE_FACTOR = 0.25;
   const SWIPE_VELOCITY = 500;
 
-  const panGesture = Gesture.Pan()
+  const panGesture = useMemo(() => Gesture.Pan()
     .runOnJS(true)
     .activeOffsetX([-15, 15])
     .failOffsetY([-10, 10])
@@ -105,9 +105,9 @@ export default function AlbumSpread() {
       } else if (e.translationX > dxThreshold || e.velocityX > SWIPE_VELOCITY) {
         turn("prev");
       }
-    });
+    }), [stageSize.w, turn]);
 
-  const tapGesture = Gesture.Tap()
+  const tapGesture = useMemo(() => Gesture.Tap()
     .runOnJS(true)
     .maxDistance(10)
     .withRef(parentTapRef)
@@ -115,9 +115,9 @@ export default function AlbumSpread() {
       if (!success) return;
       if (e.x < stageSize.w / 2) turn("prev");
       else turn("next");
-    });
+    }), [stageSize.w, turn]);
 
-  const composedGesture = Gesture.Exclusive(panGesture, tapGesture);
+  const composedGesture = useMemo(() => Gesture.Exclusive(panGesture, tapGesture), [panGesture, tapGesture]);
 
   const onTurnFinished = useCallback(() => {
     setPageIdx((idx) => (turning === "next" ? idx + 1 : turning === "prev" ? idx - 1 : idx));
