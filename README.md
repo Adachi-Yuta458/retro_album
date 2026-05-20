@@ -1,4 +1,4 @@
-# 思い出棚 — 昭和の家族アルバム
+# Filmy — 昭和の家族アルバム
 
 `Album-App.html`（Claude Artifact のデザインモック）を元にした iOS ネイティブアルバムアプリ。
 

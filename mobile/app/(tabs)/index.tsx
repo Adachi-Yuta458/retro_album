@@ -70,7 +70,7 @@ export default function Home() {
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>MY ALBUM</Text>
-            <Text style={styles.title}>思い出棚</Text>
+            <Text style={styles.title}>Filmy</Text>
           </View>
           <Pressable style={styles.pill} onPress={() => router.push("/(tabs)/new")}>
             <Svg width={14} height={14} viewBox="0 0 24 24">

@@ -43,8 +43,8 @@ export default function Login() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1, justifyContent: "center", padding: 24 }}
       >
-        <Text style={styles.eyebrow}>OMOIDE TANA</Text>
-        <Text style={styles.title}>思い出棚</Text>
+        <Text style={styles.eyebrow}>RETRO ALBUM</Text>
+        <Text style={styles.title}>Filmy</Text>
         <Text style={styles.subtitle}>昭和の家族アルバム</Text>
 
         <View style={styles.field}>

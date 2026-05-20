@@ -47,7 +47,7 @@ export default function Signup() {
       >
         <Text style={styles.eyebrow}>NEW MEMBER</Text>
         <Text style={styles.title}>はじめまして</Text>
-        <Text style={styles.subtitle}>あなたの思い出棚を作りましょう</Text>
+        <Text style={styles.subtitle}>あなたのアルバムを作りましょう</Text>
 
         <View style={styles.field}>
           <Text style={styles.label}>お名前</Text>
