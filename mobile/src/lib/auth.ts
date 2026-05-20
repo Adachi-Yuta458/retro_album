@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 
-const KEY = "omoidetana.token";
+const KEY = "filmy.token";
 
 export async function saveToken(token: string) {
   await SecureStore.setItemAsync(KEY, token);
