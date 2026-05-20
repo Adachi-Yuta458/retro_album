@@ -1,5 +1,6 @@
 {
   "enabledPlugins": {
-    "wiki@llm-wiki": true
+    "wiki@llm-wiki": true,
+    "mental-model-reviewer@yuta-plugins": true
   }
 }
